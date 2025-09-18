@@ -75,7 +75,12 @@ export class SupabaseService {
   }
 
   async getCalibrationProfiles(userId: string): Promise<CalibrationProfile[]> {
-    if (!supabase) return []
+    if (!supabase) {
+      console.log('🔌 Supabase client not available')
+      return []
+    }
+    
+    console.log(`🔍 Supabase: Querying calibration_profiles for user_id: ${userId}`)
     
     // Get calibration profiles
     const { data: profiles, error: profilesError } = await supabase
@@ -85,9 +90,11 @@ export class SupabaseService {
       .order('created_at', { ascending: false })
 
     if (profilesError) {
-      console.error('Error fetching calibration profiles:', profilesError)
+      console.error('❌ Supabase: Error fetching calibration profiles:', profilesError)
       return []
     }
+
+    console.log(`📊 Supabase: Found ${profiles?.length || 0} profiles for user ${userId}`)
 
     // Get samples for each profile
     const calibrations: CalibrationProfile[] = []
