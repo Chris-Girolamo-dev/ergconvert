@@ -7,7 +7,7 @@ export async function GET() {
       status: 'OK',
       authConfigExists: !!authOptions,
       providersCount: authOptions.providers?.length || 0,
-      hasGoogleProvider: authOptions.providers?.some((p: any) => p.id === 'google') || false,
+      hasGoogleProvider: authOptions.providers?.some((p) => 'id' in p && p.id === 'google') || false,
       sessionStrategy: authOptions.session?.strategy || 'unknown',
       timestamp: new Date().toISOString()
     })
