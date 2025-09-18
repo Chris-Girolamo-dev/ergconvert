@@ -3,15 +3,18 @@
 import { useState, useEffect } from 'react'
 import { CalibrationProfile, UserProfile } from '@/lib/types'
 import { persistence } from '@/lib/persistence'
+import { useAuth } from '@/lib/auth'
 import Link from 'next/link'
 
 export default function SettingsPage() {
+  const { session } = useAuth()
   const [calibrations, setCalibrations] = useState<CalibrationProfile[]>([])
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [preferredUnits, setPreferredUnits] = useState<'watts' | 'pace' | 'rpm'>('watts')
   const [exportData, setExportData] = useState('')
   const [importData, setImportData] = useState('')
   const [message, setMessage] = useState('')
+  const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     loadData()
@@ -102,20 +105,67 @@ export default function SettingsPage() {
     URL.revokeObjectURL(url)
   }
 
-  const deleteCalibration = async (id: number) => {
+  const deleteCalibration = async (calibration: CalibrationProfile) => {
     if (!confirm('Are you sure you want to delete this calibration? This cannot be undone.')) {
       return
     }
 
+    const localId = calibration.id as number
+    const cloudId = typeof calibration.id === 'string' ? calibration.id : null
+
+    // Add to deleting set for loading state
+    setDeletingIds(prev => new Set(prev.add(localId)))
+
     try {
-      await persistence.deleteCalibration(id)
-      setMessage('Calibration deleted successfully!')
-      setTimeout(() => setMessage(''), 3000)
-      // Reload calibrations
+      console.log('🗑️ Starting calibration deletion...', { localId, cloudId, hasSession: !!session })
+
+      // Step 1: Delete from local storage (always do this first for immediate UI feedback)
+      await persistence.deleteCalibration(localId)
+      console.log('✅ Deleted from local storage')
+
+      // Step 2: If user is signed in and we have a cloud ID, delete from cloud
+      if (session?.user?.id && cloudId) {
+        console.log('☁️ Attempting cloud deletion...', cloudId)
+        try {
+          const response = await fetch(`/api/calibrations/${cloudId}`, {
+            method: 'DELETE',
+          })
+
+          if (!response.ok) {
+            const errorData = await response.text()
+            console.error('❌ Cloud delete failed:', response.status, errorData)
+            setMessage('Deleted locally, but cloud delete failed. Will sync next time you\'re online.')
+          } else {
+            console.log('✅ Successfully deleted from cloud')
+            setMessage('Calibration deleted successfully from all devices!')
+          }
+        } catch (cloudError) {
+          console.error('❌ Cloud delete error:', cloudError)
+          setMessage('Deleted locally, but cloud delete failed. Will sync next time you\'re online.')
+        }
+      } else if (session?.user?.id) {
+        // User is signed in but calibration doesn't have cloud ID (local-only calibration)
+        setMessage('Calibration deleted successfully!')
+      } else {
+        // User not signed in - local delete only
+        setMessage('Calibration deleted locally!')
+      }
+
+      setTimeout(() => setMessage(''), 5000)
+      
+      // Reload calibrations to update UI
       await loadData()
     } catch (err) {
+      console.error('❌ Delete calibration error:', err)
       setMessage('Error deleting calibration')
-      console.error('Delete calibration error:', err)
+      setTimeout(() => setMessage(''), 3000)
+    } finally {
+      // Remove from deleting set
+      setDeletingIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(localId)
+        return newSet
+      })
     }
   }
 
@@ -240,9 +290,10 @@ export default function SettingsPage() {
                         {cal.id && (
                           <div className="ml-4">
                             <button
-                              onClick={() => deleteCalibration(cal.id!)}
-                              className="group relative bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 p-2 rounded-lg transition-all duration-200"
-                              title="Delete calibration"
+                              onClick={() => deleteCalibration(cal)}
+                              disabled={deletingIds.has(cal.id as number)}
+                              className="group relative bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 p-2 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={deletingIds.has(cal.id as number) ? "Deleting..." : "Delete calibration"}
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
