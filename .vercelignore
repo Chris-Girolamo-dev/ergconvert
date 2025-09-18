@@ -1,0 +1,32 @@
+# Development files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Documentation
+README.md
+AUTHENTICATION_SETUP.md
+supabase-schema.sql
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local development
+.next/
+node_modules/
+
+# Test files
+coverage/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
