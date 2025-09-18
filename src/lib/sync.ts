@@ -34,6 +34,8 @@ export class SyncService {
       // Get cloud calibrations
       console.log('☁️ Fetching cloud calibrations...')
       const cloudResponse = await fetch('/api/calibrations')
+      console.log(`☁️ Cloud fetch response status: ${cloudResponse.status} ${cloudResponse.statusText}`)
+      
       if (!cloudResponse.ok) {
         const errorText = await cloudResponse.text()
         console.error('☁️ Cloud fetch failed:', cloudResponse.status, errorText)
@@ -122,17 +124,30 @@ export class SyncService {
   }
 
   private async uploadCalibration(calibration: CalibrationProfile): Promise<void> {
-    const response = await fetch('/api/calibrations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(calibration)
-    })
+    console.log(`📤 Starting upload for damper ${calibration.damper}`)
+    
+    try {
+      const response = await fetch('/api/calibrations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(calibration)
+      })
 
-    if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Upload failed: ${error}`)
+      console.log(`📤 Upload response status: ${response.status} ${response.statusText}`)
+
+      if (!response.ok) {
+        const error = await response.text()
+        console.error(`📤 Upload failed with status ${response.status}:`, error)
+        throw new Error(`Upload failed: ${error}`)
+      }
+
+      const result = await response.json()
+      console.log(`📤 Upload successful:`, result)
+    } catch (fetchError) {
+      console.error(`📤 Fetch error:`, fetchError)
+      throw fetchError
     }
   }
 
