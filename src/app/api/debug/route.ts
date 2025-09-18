@@ -13,7 +13,7 @@ export async function GET() {
   let databaseTest = { success: false, error: 'Not tested' }
   if (supabase) {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('calibration_profiles')
         .select('count', { count: 'exact', head: true })
       

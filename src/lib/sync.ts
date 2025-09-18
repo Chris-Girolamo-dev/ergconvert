@@ -138,7 +138,7 @@ export class SyncService {
       console.log(`📤 Upload response status: ${response.status} ${response.statusText}`)
 
       if (!response.ok) {
-        let errorDetails: any
+        let errorDetails: unknown
         try {
           errorDetails = await response.json()
           console.error(`📤 Upload failed with status ${response.status} - JSON error:`, errorDetails)

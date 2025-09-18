@@ -20,7 +20,7 @@ export async function GET() {
 
     // Test 2: Check if tables exist
     console.log('🧪 Test 2: Testing table existence...')
-    const { data: tables, error: tablesError } = await supabase
+    const { error: tablesError } = await supabase
       .from('calibration_profiles')
       .select('count', { count: 'exact', head: true })
 
