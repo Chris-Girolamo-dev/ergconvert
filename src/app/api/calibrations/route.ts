@@ -57,18 +57,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log(`📝 API POST: Calling Supabase saveCalibrationProfile...`)
     const calibrationId = await supabaseService.saveCalibrationProfile(
       session.user.id,
       calibration
     )
     
+    console.log(`📝 API POST: Supabase returned calibrationId:`, calibrationId)
+    
     if (!calibrationId) {
+      console.log(`❌ API POST: No calibrationId returned from Supabase`)
       return NextResponse.json(
         { error: 'Failed to save calibration' },
         { status: 500 }
       )
     }
 
+    console.log(`✅ API POST: Successfully saved calibration with ID: ${calibrationId}`)
     return NextResponse.json({ 
       success: true, 
       calibrationId 

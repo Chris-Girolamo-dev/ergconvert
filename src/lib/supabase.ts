@@ -134,7 +134,13 @@ export class SupabaseService {
   }
 
   async saveCalibrationProfile(userId: string, calibration: CalibrationProfile): Promise<string | null> {
-    if (!supabase) return null
+    if (!supabase) {
+      console.log('🔌 Supabase client not available for save')
+      return null
+    }
+    
+    console.log(`💾 Supabase: Saving calibration profile for user ${userId}, damper ${calibration.damper}`)
+    console.log('💾 Supabase: Calibration data:', { damper: calibration.damper, a: calibration.a, b: calibration.b, r2: calibration.r2 })
     
     // Insert calibration profile
     const { data: profileData, error: profileError } = await supabase
@@ -150,9 +156,11 @@ export class SupabaseService {
       .single()
 
     if (profileError) {
-      console.error('Error saving calibration profile:', profileError)
+      console.error('❌ Supabase: Error saving calibration profile:', profileError)
       return null
     }
+
+    console.log('✅ Supabase: Saved calibration profile with ID:', profileData.id)
 
     const calibrationId = profileData.id
 
