@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
 
 export async function GET() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -9,27 +8,31 @@ export async function GET() {
   const googleClientId = process.env.GOOGLE_CLIENT_ID
   const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
 
-  // Quick database test
-  let databaseTest = { success: false, error: 'Not tested' }
-  if (supabase) {
-    try {
-      const { error } = await supabase
-        .from('calibration_profiles')
-        .select('count', { count: 'exact', head: true })
-      
-      if (error) {
-        databaseTest = { 
-          success: false, 
-          error: `${error.code}: ${error.message}${error.hint ? ' (Hint: ' + error.hint + ')' : ''}` 
+  // Simple database test without heavy imports
+  let databaseTest = { success: false, error: 'Supabase import disabled for 502 debugging' }
+  
+  // Basic connectivity test
+  try {
+    if (supabaseUrl && supabaseServiceKey) {
+      // Try a basic fetch to test if the URL is reachable
+      const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+        method: 'HEAD',
+        headers: {
+          'apikey': supabaseServiceKey,
+          'Authorization': `Bearer ${supabaseServiceKey}`
         }
+      })
+      
+      if (response.ok) {
+        databaseTest = { success: true, error: 'Basic Supabase endpoint accessible' }
       } else {
-        databaseTest = { success: true, error: 'Database accessible' }
+        databaseTest = { success: false, error: `Supabase endpoint returned ${response.status}` }
       }
-    } catch (err) {
-      databaseTest = { success: false, error: String(err) }
+    } else {
+      databaseTest = { success: false, error: 'Missing Supabase environment variables' }
     }
-  } else {
-    databaseTest = { success: false, error: 'Supabase client not initialized' }
+  } catch (err) {
+    databaseTest = { success: false, error: `Fetch error: ${String(err)}` }
   }
 
   return NextResponse.json({
