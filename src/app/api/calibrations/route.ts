@@ -6,6 +6,12 @@ import { CalibrationProfile } from '@/lib/types'
 
 export async function GET() {
   try {
+    console.log('🔍 API GET: Starting GET request')
+    console.log('🔍 API GET: Environment check:', {
+      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    })
+    
     const session = await getServerSession(authOptions)
     console.log('🔍 API: Checking session:', session?.user?.id)
     
@@ -30,6 +36,12 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('📝 API POST: Starting POST request')
+    console.log('📝 API POST: Environment check:', {
+      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    })
+    
     const session = await getServerSession(authOptions)
     console.log('📝 API POST: Checking session:', session?.user?.id)
     
