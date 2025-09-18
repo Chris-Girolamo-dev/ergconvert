@@ -27,15 +27,21 @@ export class SyncService {
 
     try {
       // Get local calibrations
+      console.log('📱 Fetching local calibrations...')
       const localCalibrations = await persistence.getCalibrationHistory()
+      console.log(`📱 Found ${localCalibrations.length} local calibrations`)
       
       // Get cloud calibrations
+      console.log('☁️ Fetching cloud calibrations...')
       const cloudResponse = await fetch('/api/calibrations')
       if (!cloudResponse.ok) {
+        const errorText = await cloudResponse.text()
+        console.error('☁️ Cloud fetch failed:', cloudResponse.status, errorText)
         throw new Error(`Failed to fetch cloud calibrations: ${cloudResponse.statusText}`)
       }
       
       const { calibrations: cloudCalibrations } = await cloudResponse.json()
+      console.log(`☁️ Found ${cloudCalibrations.length} cloud calibrations`)
       
       // Create maps for easier comparison
       const localMap = new Map<string, CalibrationProfile>()
@@ -54,24 +60,32 @@ export class SyncService {
       }
       
       // Upload local calibrations that don't exist in cloud
+      console.log('⬆️ Checking for calibrations to upload...')
       for (const [key, local] of localMap) {
         if (!cloudMap.has(key)) {
+          console.log(`⬆️ Uploading calibration: damper ${local.damper}`)
           try {
             await this.uploadCalibration(local)
             result.uploaded++
+            console.log(`✅ Uploaded calibration: damper ${local.damper}`)
           } catch (error) {
+            console.error(`❌ Upload failed for damper ${local.damper}:`, error)
             result.errors.push(`Failed to upload calibration: ${error}`)
           }
         }
       }
       
       // Download cloud calibrations that don't exist locally
+      console.log('⬇️ Checking for calibrations to download...')
       for (const [key, cloud] of cloudMap) {
         if (!localMap.has(key)) {
+          console.log(`⬇️ Downloading calibration: damper ${cloud.damper}`)
           try {
             await this.downloadCalibration(cloud)
             result.downloaded++
+            console.log(`✅ Downloaded calibration: damper ${cloud.damper}`)
           } catch (error) {
+            console.error(`❌ Download failed for damper ${cloud.damper}:`, error)
             result.errors.push(`Failed to download calibration: ${error}`)
           }
         }
@@ -138,20 +152,23 @@ export class SyncService {
   }
 
   async autoSync(userId: string): Promise<void> {
+    console.log('🔄 Auto-sync starting for user:', userId)
+    
     if (!this.isOnline()) {
-      console.log('Skipping auto-sync: offline')
+      console.log('⚠️ Skipping auto-sync: offline')
       return
     }
 
     try {
+      console.log('📡 Attempting to sync calibrations...')
       const result = await this.syncCalibrations(userId)
-      console.log('Auto-sync completed:', result)
+      console.log('✅ Auto-sync completed:', result)
       
       if (result.errors.length > 0) {
-        console.warn('Auto-sync completed with errors:', result.errors)
+        console.warn('⚠️ Auto-sync completed with errors:', result.errors)
       }
     } catch (error) {
-      console.error('Auto-sync failed:', error)
+      console.error('❌ Auto-sync failed:', error)
     }
   }
 
