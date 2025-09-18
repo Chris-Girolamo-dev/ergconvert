@@ -6,29 +6,18 @@ import { CalibrationProfile } from '@/lib/types'
 
 export async function GET() {
   try {
-    console.log('🔍 API GET: Starting GET request')
-    console.log('🔍 API GET: Environment check:', {
-      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    console.log('🔍 API GET: Starting GET request - NEW VERSION')
+    
+    // Quick test: return empty calibrations to isolate issue
+    return NextResponse.json({ 
+      calibrations: [],
+      message: 'GET route working - returning empty calibrations for testing'
     })
     
-    const session = await getServerSession(authOptions)
-    console.log('🔍 API: Checking session:', session?.user?.id)
-    
-    if (!session?.user?.id) {
-      console.log('❌ API: No user ID in session')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    console.log(`🔍 API: Fetching calibrations for user: ${session.user.id}`)
-    const calibrations = await supabaseService.getCalibrationProfiles(session.user.id)
-    console.log(`✅ API: Found ${calibrations.length} calibrations`)
-    
-    return NextResponse.json({ calibrations })
   } catch (error) {
-    console.error('❌ API: Error fetching calibrations:', error)
+    console.error('🔍 API GET: Catch block error:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch calibrations' },
+      { error: 'GET route catch error', details: String(error) },
       { status: 500 }
     )
   }
@@ -36,64 +25,19 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('📝 API POST: Starting POST request')
-    console.log('📝 API POST: Environment check:', {
-      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
-    })
+    console.log('📝 API POST: Starting POST request - NEW VERSION')
     
-    const session = await getServerSession(authOptions)
-    console.log('📝 API POST: Checking session:', session?.user?.id)
-    
-    if (!session?.user?.id) {
-      console.log('❌ API POST: No user ID in session')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const calibration: CalibrationProfile = await request.json()
-    console.log(`📝 API POST: Saving calibration for user ${session.user.id}, damper ${calibration.damper}`)
-    
-    // Validate required fields
-    if (!calibration.damper || !calibration.a || !calibration.b || !calibration.r2 || !calibration.samples) {
-      return NextResponse.json(
-        { error: 'Missing required calibration fields' },
-        { status: 400 }
-      )
-    }
-
-    // Validate samples
-    if (!Array.isArray(calibration.samples) || calibration.samples.length === 0) {
-      return NextResponse.json(
-        { error: 'Calibration must have at least one sample' },
-        { status: 400 }
-      )
-    }
-
-    console.log(`📝 API POST: Calling Supabase saveCalibrationProfile...`)
-    const calibrationId = await supabaseService.saveCalibrationProfile(
-      session.user.id,
-      calibration
-    )
-    
-    console.log(`📝 API POST: Supabase returned calibrationId:`, calibrationId)
-    
-    if (!calibrationId) {
-      console.log(`❌ API POST: No calibrationId returned from Supabase`)
-      return NextResponse.json(
-        { error: 'Failed to save calibration' },
-        { status: 500 }
-      )
-    }
-
-    console.log(`✅ API POST: Successfully saved calibration with ID: ${calibrationId}`)
+    // Quick test: return success immediately to isolate issue
     return NextResponse.json({ 
       success: true, 
-      calibrationId 
+      calibrationId: 'test-123',
+      message: 'POST route working - Supabase disabled for testing'
     })
+    
   } catch (error) {
-    console.error('Error saving calibration:', error)
+    console.error('📝 API POST: Catch block error:', error)
     return NextResponse.json(
-      { error: 'Failed to save calibration' },
+      { error: 'POST route catch error', details: String(error) },
       { status: 500 }
     )
   }
