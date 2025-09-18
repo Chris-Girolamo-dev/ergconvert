@@ -21,43 +21,24 @@ export const authOptions: NextAuthOptions = {
       clientSecret: googleClientSecret,
     }),
   ] : [],
-  // Only use Supabase adapter if both Supabase and Google credentials are available
-  ...(supabase && googleClientId && googleClientSecret ? {
-    adapter: SupabaseAdapter({
-      url: supabaseUrl!,
-      secret: supabaseServiceKey!,
-    }),
-    session: {
-      strategy: 'database' as const,
+  // Temporarily use JWT-only to debug callback issues
+  session: {
+    strategy: 'jwt' as const,
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.sub = user.id
+      }
+      return token
     },
-    callbacks: {
-      async session({ session, user }) {
-        // Add user ID to session
-        if (session.user) {
-          session.user.id = user.id
-        }
-        return session
-      },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.sub as string
+      }
+      return session
     },
-  } : {
-    session: {
-      strategy: 'jwt' as const,
-    },
-    callbacks: {
-      async jwt({ token, user }) {
-        if (user) {
-          token.sub = user.id
-        }
-        return token
-      },
-      async session({ session, token }) {
-        if (session.user) {
-          session.user.id = token.sub as string
-        }
-        return session
-      },
-    },
-  }),
+  },
   pages: {
     signIn: '/auth/signin',
     error: '/auth/error',
