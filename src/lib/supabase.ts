@@ -153,6 +153,7 @@ export class SupabaseService {
     console.log('💾 Supabase: Calibration data:', { damper: calibration.damper, a: calibration.a, b: calibration.b, r2: calibration.r2 })
     
     // Insert calibration profile
+    console.log('💾 Attempting to insert calibration profile...')
     const { data: profileData, error: profileError } = await supabase
       .from('calibration_profiles')
       .insert({
@@ -167,6 +168,12 @@ export class SupabaseService {
 
     if (profileError) {
       console.error('❌ Supabase: Error saving calibration profile:', profileError)
+      console.error('❌ Supabase: Profile error details:', {
+        code: profileError.code,
+        message: profileError.message,
+        details: profileError.details,
+        hint: profileError.hint
+      })
       return null
     }
 
@@ -183,13 +190,21 @@ export class SupabaseService {
       timestamp_recorded: new Date(sample.timestamp).toISOString()
     }))
 
+    console.log('💾 Attempting to insert calibration samples...', sampleInserts.length, 'samples')
     const { error: samplesError } = await supabase
       .from('calibration_samples')
       .insert(sampleInserts)
 
     if (samplesError) {
-      console.error('Error saving calibration samples:', samplesError)
+      console.error('❌ Supabase: Error saving calibration samples:', samplesError)
+      console.error('❌ Supabase: Samples error details:', {
+        code: samplesError.code,
+        message: samplesError.message,
+        details: samplesError.details,
+        hint: samplesError.hint
+      })
       // Clean up the profile if samples failed
+      console.log('🧹 Cleaning up profile due to samples error...')
       await supabase
         .from('calibration_profiles')
         .delete()

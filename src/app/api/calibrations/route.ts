@@ -43,10 +43,12 @@ export async function POST(request: NextRequest) {
     console.log('📝 API POST: Saving calibration for user:', session.user.id)
     console.log('📝 API POST: Calibration data:', { damper: calibration.damper, samples: calibration.samples?.length })
     
+    console.log('📝 API POST: Calling supabaseService.saveCalibrationProfile...')
     const calibrationId = await supabaseService.saveCalibrationProfile(session.user.id, calibration)
+    console.log('📝 API POST: supabaseService returned:', calibrationId)
     
     if (!calibrationId) {
-      console.error('📝 API POST: Failed to save calibration')
+      console.error('📝 API POST: Failed to save calibration - service returned null')
       return NextResponse.json(
         { error: 'Failed to save calibration' },
         { status: 500 }
