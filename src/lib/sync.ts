@@ -8,7 +8,7 @@ export class SyncService {
     return typeof navigator !== 'undefined' ? navigator.onLine : true
   }
 
-  async syncCalibrations(userId: string): Promise<{ 
+  async syncCalibrations(_userId: string): Promise<{ 
     uploaded: number; 
     downloaded: number; 
     conflicts: number;

@@ -416,11 +416,9 @@ class PersistenceManager {
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([STORES.profiles, STORES.calibrations, STORES.workouts], 'readwrite')
       
-      const promises = [
-        transaction.objectStore(STORES.profiles).clear(),
-        transaction.objectStore(STORES.calibrations).clear(),
-        transaction.objectStore(STORES.workouts).clear()
-      ]
+      transaction.objectStore(STORES.profiles).clear()
+      transaction.objectStore(STORES.calibrations).clear()
+      transaction.objectStore(STORES.workouts).clear()
       
       transaction.onerror = () => reject(transaction.error)
       transaction.oncomplete = () => {

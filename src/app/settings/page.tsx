@@ -164,7 +164,7 @@ export default function SettingsPage() {
               console.log('☁️ Found', cloudCalibrations.length, 'cloud calibrations, searching for damper', calibration.damper)
               
               // Find calibration with matching damper
-              const matchingCalibration = cloudCalibrations.find((cal: any) => cal.damper === calibration.damper)
+              const matchingCalibration = cloudCalibrations.find((cal: CalibrationProfile) => cal.damper === calibration.damper)
               
               if (matchingCalibration) {
                 console.log('☁️ Found matching cloud calibration:', matchingCalibration.id)

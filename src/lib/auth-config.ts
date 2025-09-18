@@ -1,18 +1,9 @@
 import { NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
-import { SupabaseAdapter } from '@auth/supabase-adapter'
-import { createClient } from '@supabase/supabase-js'
 
-// Check if Supabase environment variables are available
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+// Check if environment variables are available
 const googleClientId = process.env.GOOGLE_CLIENT_ID
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
-
-// Only create Supabase client if environment variables are present
-const supabase = supabaseUrl && supabaseServiceKey 
-  ? createClient(supabaseUrl, supabaseServiceKey)
-  : null
 
 export const authOptions: NextAuthOptions = {
   providers: googleClientId && googleClientSecret ? [
