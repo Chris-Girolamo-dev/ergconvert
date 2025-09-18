@@ -1,0 +1,52 @@
+export interface UserProfile {
+  id: string
+  preferred_units: 'watts' | 'pace' | 'rpm'
+  last_damper: number
+  calibrations: CalibrationProfile[]
+}
+
+export interface CalibrationProfile {
+  damper: number
+  a: number // coefficient
+  b: number // exponent
+  r2: number
+  samples: Sample[]
+}
+
+export interface Sample {
+  rpm: number
+  watts: number
+  source: 'manual' | 'ble'
+  timestamp: number
+}
+
+export interface Workout {
+  id: string
+  source_modality: 'row' | 'bike'
+  target_modality: 'row' | 'bike'
+  intervals: Interval[]
+  rest: number // seconds
+  target_spec: 'pace_500' | 'pace_1000' | 'watts' | 'rpm'
+  damper_for_target?: number
+}
+
+export interface Interval {
+  duration?: number // seconds
+  distance?: number // meters
+  target_value: number // pace (seconds), watts, or rpm
+}
+
+export interface ConversionResult {
+  intervals: ConvertedInterval[]
+  rest_seconds: number
+  damper: number
+}
+
+export interface ConvertedInterval {
+  rep: number
+  target_watts: number
+  target_rpm: number
+  target_pace: number // seconds per 500m or 1000m
+  duration_seconds?: number
+  distance_meters?: number
+}
