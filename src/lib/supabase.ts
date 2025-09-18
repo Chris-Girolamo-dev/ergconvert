@@ -40,7 +40,10 @@ export interface SupabaseUserProfile {
 
 export class SupabaseService {
   async getUserProfile(userId: string): Promise<SupabaseUserProfile | null> {
-    if (!supabase) return null
+    if (!supabase) {
+      console.log('🔌 SupabaseService: Client not available in getUserProfile')
+      return null
+    }
     
     const { data, error } = await supabase
       .from('user_profiles')
@@ -134,8 +137,15 @@ export class SupabaseService {
   }
 
   async saveCalibrationProfile(userId: string, calibration: CalibrationProfile): Promise<string | null> {
+    console.log('💾 SupabaseService: Starting saveCalibrationProfile')
+    console.log('💾 Environment check - URL exists:', !!supabaseUrl)
+    console.log('💾 Environment check - Key exists:', !!supabaseServiceKey)
+    console.log('💾 Environment check - Client exists:', !!supabase)
+    
     if (!supabase) {
-      console.log('🔌 Supabase client not available for save')
+      console.error('🔌 SupabaseService: Client not available for save!')
+      console.log('🔌 URL value (first 20 chars):', supabaseUrl?.substring(0, 20))
+      console.log('🔌 Key value (first 20 chars):', supabaseServiceKey?.substring(0, 20))
       return null
     }
     
