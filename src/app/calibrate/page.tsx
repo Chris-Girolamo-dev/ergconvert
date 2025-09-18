@@ -96,10 +96,13 @@ export default function CalibratePage() {
           a: result.a,
           b: result.b,
           r2: result.r2,
-          samples: finalSamples
+          samples: finalSamples,
+          created_at: Date.now(),
+          updated_at: Date.now()
         }
 
-        await persistence.saveCalibration(calibration)
+        const savedCalibration = await persistence.saveCalibration(calibration)
+        console.log('Calibration saved with ID:', savedCalibration.id)
         setCurrentStep(3) // Complete
       } else {
         setError(`Low R² (${result.r2.toFixed(3)}). Consider adding another sample for better accuracy.`)

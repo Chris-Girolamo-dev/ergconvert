@@ -19,12 +19,8 @@ export default function SettingsPage() {
 
   const loadData = async () => {
     try {
-      // Load all calibrations for display
-      const allCalibrations: CalibrationProfile[] = []
-      for (let damper = 1; damper <= 10; damper++) {
-        const cals = await persistence.loadCalibrationsByDamper(damper)
-        allCalibrations.push(...cals)
-      }
+      // Load calibration history (sorted by created_at descending)
+      const allCalibrations = await persistence.getCalibrationHistory()
       setCalibrations(allCalibrations)
 
       // Load or create profile
@@ -104,6 +100,23 @@ export default function SettingsPage() {
     a.download = `row-bike-converter-backup-${new Date().toISOString().split('T')[0]}.json`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const deleteCalibration = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this calibration? This cannot be undone.')) {
+      return
+    }
+
+    try {
+      await persistence.deleteCalibration(id)
+      setMessage('Calibration deleted successfully!')
+      setTimeout(() => setMessage(''), 3000)
+      // Reload calibrations
+      await loadData()
+    } catch (err) {
+      setMessage('Error deleting calibration')
+      console.error('Delete calibration error:', err)
+    }
   }
 
   return (
@@ -201,17 +214,22 @@ export default function SettingsPage() {
               {calibrations.length > 0 ? (
                 <div className="space-y-4">
                   {calibrations.map((cal, index) => (
-                    <div key={index} className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+                    <div key={cal.id || index} className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-white font-bold text-lg">Damper {cal.damper}</div>
-                          <div className="text-gray-300">
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="text-white font-bold text-lg">Damper {cal.damper}</div>
+                            {cal.created_at && (
+                              <div className="text-gray-400 text-sm">
+                                {new Date(cal.created_at).toLocaleDateString()} {new Date(cal.created_at).toLocaleTimeString()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-gray-300 mb-2">
                             R² = {cal.r2.toFixed(3)} ({cal.samples.length} samples)
                           </div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <div className="text-right">
-                            <div className="bg-green-500/20 text-green-300 px-3 py-1 rounded-lg font-mono text-sm mb-1">
+                          <div className="flex items-center space-x-3">
+                            <div className="bg-green-500/20 text-green-300 px-3 py-1 rounded-lg font-mono text-sm">
                               a = {cal.a.toFixed(6)}
                             </div>
                             <div className="bg-green-600/20 text-green-300 px-3 py-1 rounded-lg font-mono text-sm">
@@ -219,6 +237,19 @@ export default function SettingsPage() {
                             </div>
                           </div>
                         </div>
+                        {cal.id && (
+                          <div className="ml-4">
+                            <button
+                              onClick={() => deleteCalibration(cal.id!)}
+                              className="group relative bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 p-2 rounded-lg transition-all duration-200"
+                              title="Delete calibration"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
