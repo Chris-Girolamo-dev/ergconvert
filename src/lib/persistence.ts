@@ -70,11 +70,12 @@ class PersistenceManager {
         if (oldVersion < 2) {
           // Add timestamps to existing calibrations if upgrading from v1
           if (db.objectStoreNames.contains(STORES.calibrations)) {
-            const transaction = event.target.transaction
+            const transaction = (event.target as IDBRequest)?.transaction
+            if (!transaction) return
             const calibStore = transaction.objectStore(STORES.calibrations)
             
             calibStore.openCursor().onsuccess = (cursorEvent) => {
-              const cursor = cursorEvent.target.result
+              const cursor = (cursorEvent.target as IDBRequest)?.result
               if (cursor) {
                 const calibration = cursor.value
                 if (!calibration.created_at) {

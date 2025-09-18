@@ -91,15 +91,18 @@ export default function ConvertPage() {
     if (field === 'target_value') {
       if (targetSpec.includes('pace')) {
         // Handle MM:SS format
-        const seconds = parseMMSSToSeconds(value)
+        const seconds = parseMMSSToSeconds(value.toString())
         updated[index].target_value = seconds
-        updated[index].target_display = value
+        updated[index].target_display = value.toString()
       } else {
-        updated[index].target_value = value
+        updated[index].target_value = typeof value === 'string' ? parseFloat(value) : value
         updated[index].target_display = value.toString()
       }
     } else {
-      updated[index][field] = value
+      // Handle other fields like distance
+      if (field === 'distance') {
+        updated[index].distance = typeof value === 'string' ? parseFloat(value) : value
+      }
     }
     setIntervals(updated)
   }
@@ -116,6 +119,7 @@ export default function ConvertPage() {
       }
 
       const workout: Workout = {
+        id: Date.now().toString(), // Generate a simple ID
         source_modality: sourceModality,
         target_modality: targetModality,
         target_spec: targetSpec,

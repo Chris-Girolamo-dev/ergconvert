@@ -1,4 +1,4 @@
-import { Workout, ConversionResult, ConvertedInterval, CalibrationProfile } from './types'
+import { Workout, ConversionResult, ConvertedInterval, CalibrationProfile, Interval } from './types'
 import { paceToWatts, wattsToPace } from './c2'
 import { predictRpm, getGenericCalibration, clampRpm } from './calibration'
 
