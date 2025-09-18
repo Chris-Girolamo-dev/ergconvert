@@ -86,7 +86,7 @@ export default function ConvertPage() {
     }
   }
 
-  const updateInterval = (index: number, field: string, value: any) => {
+  const updateInterval = (index: number, field: string, value: string | number) => {
     const updated = [...intervals]
     if (field === 'target_value') {
       if (targetSpec.includes('pace')) {

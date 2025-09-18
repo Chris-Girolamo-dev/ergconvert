@@ -6,7 +6,7 @@ import { predictRpm, getGenericCalibration, clampRpm } from './calibration'
  * Helper functions for cross-modality conversions
  */
 
-function getSourcePace(interval: any, workout: Workout): number {
+function getSourcePace(interval: Interval, workout: Workout): number {
   // Get the pace from the source workout specification
   switch (workout.target_spec) {
     case 'pace_500':

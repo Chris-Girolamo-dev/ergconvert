@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
 export default function SignIn() {
-  const [providers, setProviders] = useState<any>(null)
+  const [providers, setProviders] = useState<Record<string, { id: string; name: string }> | null>(null)
 
   useEffect(() => {
     const getProvidersData = async () => {
@@ -37,7 +37,7 @@ export default function SignIn() {
         </div>
 
         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8 border border-white/20">
-          {providers && Object.values(providers).map((provider: any) => (
+          {providers && Object.values(providers).map((provider) => (
             <div key={provider.name} className="mb-4 last:mb-0">
               <button
                 onClick={() => signIn(provider.id, { callbackUrl: '/' })}

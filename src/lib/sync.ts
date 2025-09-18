@@ -90,7 +90,7 @@ export class SyncService {
     return `${calibration.damper}-${samplesHash}`
   }
 
-  private hashSamples(samples: any[]): string {
+  private hashSamples(samples: { rpm: number; watts: number }[]): string {
     // Simple hash of samples to detect uniqueness
     const sampleString = samples
       .map(s => `${s.rpm},${s.watts}`)
