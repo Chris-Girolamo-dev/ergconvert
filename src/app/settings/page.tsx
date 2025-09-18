@@ -117,7 +117,13 @@ export default function SettingsPage() {
     setDeletingIds(prev => new Set(prev.add(localId)))
 
     try {
-      console.log('🗑️ Starting calibration deletion...', { localId, cloudId, hasSession: !!session })
+      console.log('🗑️ Starting calibration deletion...', { 
+        localId, 
+        cloudId, 
+        hasSession: !!session,
+        sessionUserId: session?.user?.id,
+        calibrationObject: { id: calibration.id, damper: calibration.damper }
+      })
 
       // Step 1: Delete from local storage (always do this first for immediate UI feedback)
       await persistence.deleteCalibration(localId)
