@@ -138,9 +138,16 @@ export class SyncService {
       console.log(`📤 Upload response status: ${response.status} ${response.statusText}`)
 
       if (!response.ok) {
-        const error = await response.text()
-        console.error(`📤 Upload failed with status ${response.status}:`, error)
-        throw new Error(`Upload failed: ${error}`)
+        let errorDetails: any
+        try {
+          errorDetails = await response.json()
+          console.error(`📤 Upload failed with status ${response.status} - JSON error:`, errorDetails)
+        } catch {
+          errorDetails = await response.text()
+          console.error(`📤 Upload failed with status ${response.status} - Text error:`, errorDetails)
+        }
+        console.error(`📤 Full response headers:`, Object.fromEntries(response.headers.entries()))
+        throw new Error(`Upload failed: ${JSON.stringify(errorDetails)}`)
       }
 
       const result = await response.json()
