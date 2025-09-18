@@ -6,18 +6,24 @@ import { CalibrationProfile } from '@/lib/types'
 
 export async function GET() {
   try {
-    console.log('🔍 API GET: Starting GET request - NEW VERSION')
+    console.log('🔍 API GET: Starting GET request')
     
-    // Quick test: return empty calibrations to isolate issue
-    return NextResponse.json({ 
-      calibrations: [],
-      message: 'GET route working - returning empty calibrations for testing'
-    })
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      console.log('🔍 API GET: No authenticated user')
+      return NextResponse.json({ calibrations: [] })
+    }
+    
+    console.log('🔍 API GET: Fetching calibrations for user:', session.user.id)
+    const calibrations = await supabaseService.getCalibrationProfiles(session.user.id)
+    console.log(`🔍 API GET: Returning ${calibrations.length} calibrations`)
+    
+    return NextResponse.json({ calibrations })
     
   } catch (error) {
-    console.error('🔍 API GET: Catch block error:', error)
+    console.error('🔍 API GET: Error:', error)
     return NextResponse.json(
-      { error: 'GET route catch error', details: String(error) },
+      { error: 'Failed to fetch calibrations', details: String(error) },
       { status: 500 }
     )
   }
@@ -25,19 +31,35 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('📝 API POST: Starting POST request - NEW VERSION')
+    console.log('📝 API POST: Starting POST request')
     
-    // Quick test: return success immediately to isolate issue
-    return NextResponse.json({ 
-      success: true, 
-      calibrationId: 'test-123',
-      message: 'POST route working - Supabase disabled for testing'
-    })
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      console.log('📝 API POST: No authenticated user')
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    
+    const calibration: CalibrationProfile = await request.json()
+    console.log('📝 API POST: Saving calibration for user:', session.user.id)
+    console.log('📝 API POST: Calibration data:', { damper: calibration.damper, samples: calibration.samples?.length })
+    
+    const calibrationId = await supabaseService.saveCalibrationProfile(session.user.id, calibration)
+    
+    if (!calibrationId) {
+      console.error('📝 API POST: Failed to save calibration')
+      return NextResponse.json(
+        { error: 'Failed to save calibration' },
+        { status: 500 }
+      )
+    }
+    
+    console.log('📝 API POST: Successfully saved calibration with ID:', calibrationId)
+    return NextResponse.json({ success: true, calibrationId })
     
   } catch (error) {
-    console.error('📝 API POST: Catch block error:', error)
+    console.error('📝 API POST: Error:', error)
     return NextResponse.json(
-      { error: 'POST route catch error', details: String(error) },
+      { error: 'Failed to save calibration', details: String(error) },
       { status: 500 }
     )
   }
