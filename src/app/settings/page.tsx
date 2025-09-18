@@ -129,31 +129,73 @@ export default function SettingsPage() {
       await persistence.deleteCalibration(localId)
       console.log('✅ Deleted from local storage')
 
-      // Step 2: If user is signed in and we have a cloud ID, delete from cloud
-      if (session?.user?.id && cloudId) {
-        console.log('☁️ Attempting cloud deletion...', cloudId)
-        try {
-          const response = await fetch(`/api/calibrations/${cloudId}`, {
-            method: 'DELETE',
-          })
+      // Step 2: If user is signed in, attempt cloud deletion
+      if (session?.user?.id) {
+        console.log('☁️ User is signed in, checking for cloud deletion...')
+        
+        if (cloudId) {
+          // We have a cloud ID - direct deletion
+          console.log('☁️ Attempting direct cloud deletion with cloudId:', cloudId)
+          try {
+            const response = await fetch(`/api/calibrations/${cloudId}`, {
+              method: 'DELETE',
+            })
 
-          if (!response.ok) {
-            const errorData = await response.text()
-            console.error('❌ Cloud delete failed:', response.status, errorData)
+            if (!response.ok) {
+              const errorData = await response.text()
+              console.error('❌ Cloud delete failed:', response.status, errorData)
+              setMessage('Deleted locally, but cloud delete failed. Will sync next time you\'re online.')
+            } else {
+              console.log('✅ Successfully deleted from cloud')
+              setMessage('Calibration deleted successfully from all devices!')
+            }
+          } catch (cloudError) {
+            console.error('❌ Cloud delete error:', cloudError)
             setMessage('Deleted locally, but cloud delete failed. Will sync next time you\'re online.')
-          } else {
-            console.log('✅ Successfully deleted from cloud')
-            setMessage('Calibration deleted successfully from all devices!')
           }
-        } catch (cloudError) {
-          console.error('❌ Cloud delete error:', cloudError)
-          setMessage('Deleted locally, but cloud delete failed. Will sync next time you\'re online.')
+        } else {
+          // No cloud ID - need to find matching calibration in cloud
+          console.log('☁️ No cloudId found, searching for matching calibration in cloud by damper:', calibration.damper)
+          try {
+            // Fetch cloud calibrations to find matching one
+            const response = await fetch('/api/calibrations')
+            if (response.ok) {
+              const { calibrations: cloudCalibrations } = await response.json()
+              console.log('☁️ Found', cloudCalibrations.length, 'cloud calibrations, searching for damper', calibration.damper)
+              
+              // Find calibration with matching damper
+              const matchingCalibration = cloudCalibrations.find((cal: any) => cal.damper === calibration.damper)
+              
+              if (matchingCalibration) {
+                console.log('☁️ Found matching cloud calibration:', matchingCalibration.id)
+                // Delete the matching cloud calibration
+                const deleteResponse = await fetch(`/api/calibrations/${matchingCalibration.id}`, {
+                  method: 'DELETE',
+                })
+                
+                if (deleteResponse.ok) {
+                  console.log('✅ Successfully deleted matching calibration from cloud')
+                  setMessage('Calibration deleted successfully from all devices!')
+                } else {
+                  console.error('❌ Failed to delete matching calibration from cloud')
+                  setMessage('Deleted locally, but cloud delete failed. Will sync next time you\'re online.')
+                }
+              } else {
+                console.log('☁️ No matching calibration found in cloud for damper:', calibration.damper)
+                setMessage('Calibration deleted locally (was not in cloud)!')
+              }
+            } else {
+              console.error('❌ Failed to fetch cloud calibrations for matching')
+              setMessage('Deleted locally, but couldn\'t check cloud. Will sync next time you\'re online.')
+            }
+          } catch (cloudError) {
+            console.error('❌ Error searching for matching cloud calibration:', cloudError)
+            setMessage('Deleted locally, but cloud search failed. Will sync next time you\'re online.')
+          }
         }
-      } else if (session?.user?.id) {
-        // User is signed in but calibration doesn't have cloud ID (local-only calibration)
-        setMessage('Calibration deleted successfully!')
       } else {
         // User not signed in - local delete only
+        console.log('🔒 User not signed in, local delete only')
         setMessage('Calibration deleted locally!')
       }
 
