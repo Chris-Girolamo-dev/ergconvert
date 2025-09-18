@@ -1,10 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 import { CalibrationProfile, Sample, UserProfile } from './types'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseServiceKey)
+// Only create client if environment variables are available
+export const supabase = supabaseUrl && supabaseServiceKey 
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null
 
 export interface SupabaseCalibrationProfile {
   id: string
@@ -37,6 +40,8 @@ export interface SupabaseUserProfile {
 
 export class SupabaseService {
   async getUserProfile(userId: string): Promise<SupabaseUserProfile | null> {
+    if (!supabase) return null
+    
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
@@ -52,6 +57,8 @@ export class SupabaseService {
   }
 
   async updateUserProfile(userId: string, updates: Partial<SupabaseUserProfile>): Promise<SupabaseUserProfile | null> {
+    if (!supabase) return null
+    
     const { data, error } = await supabase
       .from('user_profiles')
       .update(updates)
@@ -68,6 +75,8 @@ export class SupabaseService {
   }
 
   async getCalibrationProfiles(userId: string): Promise<CalibrationProfile[]> {
+    if (!supabase) return []
+    
     // Get calibration profiles
     const { data: profiles, error: profilesError } = await supabase
       .from('calibration_profiles')
@@ -118,6 +127,8 @@ export class SupabaseService {
   }
 
   async saveCalibrationProfile(userId: string, calibration: CalibrationProfile): Promise<string | null> {
+    if (!supabase) return null
+    
     // Insert calibration profile
     const { data: profileData, error: profileError } = await supabase
       .from('calibration_profiles')
@@ -165,6 +176,8 @@ export class SupabaseService {
   }
 
   async deleteCalibrationProfile(userId: string, calibrationId: string): Promise<boolean> {
+    if (!supabase) return false
+    
     // Verify ownership
     const { data: profile, error: verifyError } = await supabase
       .from('calibration_profiles')
