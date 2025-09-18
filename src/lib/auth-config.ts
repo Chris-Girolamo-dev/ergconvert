@@ -21,20 +21,17 @@ export const authOptions: NextAuthOptions = {
       clientSecret: googleClientSecret,
     }),
   ] : [],
-  // Temporarily use JWT-only to debug callback issues
+  adapter: supabase ? SupabaseAdapter({
+    url: supabaseUrl!,
+    secret: supabaseServiceKey!,
+  }) : undefined,
   session: {
-    strategy: 'jwt' as const,
+    strategy: supabase ? 'database' as const : 'jwt' as const,
   },
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.sub = user.id
-      }
-      return token
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.sub as string
+    async session({ session, user }) {
+      if (session.user && user) {
+        session.user.id = user.id
       }
       return session
     },
@@ -43,4 +40,5 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/signin',
     error: '/auth/error',
   },
+  debug: process.env.NODE_ENV === 'development',
 }
