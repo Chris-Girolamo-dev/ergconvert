@@ -1,6 +1,6 @@
 import { Workout, ConversionResult, ConvertedInterval, CalibrationProfile, Interval } from './types'
 import { paceToWatts, wattsToPace } from './c2'
-import { predictRpm, predictRate, getGenericCalibration, getGenericRowCalibration, clampRpm, clampStrokeRate } from './calibration'
+import { predictRate, getGenericCalibration, getGenericRowCalibration, clampRpm, clampStrokeRate } from './calibration'
 
 /**
  * Helper functions for cross-modality conversions

@@ -237,7 +237,7 @@ export default function CalibrateRowerPage() {
                     </select>
                     <p className="text-gray-400 text-sm">
                       This calibration will be specific to damper setting {selectedDamper}.
-                      You'll need separate calibrations for different damper settings.
+                      You&apos;ll need separate calibrations for different damper settings.
                     </p>
                   </div>
                 </div>

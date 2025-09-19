@@ -17,7 +17,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Test calibration data (same as main page)
   const testCalibrations = [
@@ -134,6 +134,7 @@ export default function SettingsPage() {
       setExportData(data)
       setMessage('Data exported! Copy the JSON below.')
     } catch (err) {
+      console.error('Export error:', err)
       setMessage('Error exporting data')
     }
   }
@@ -151,6 +152,7 @@ export default function SettingsPage() {
       setMessage('Data imported successfully!')
       setTimeout(() => setMessage(''), 3000)
     } catch (err) {
+      console.error('Import error:', err)
       setMessage('Error importing data - please check JSON format')
     }
   }

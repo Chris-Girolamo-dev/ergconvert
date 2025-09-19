@@ -13,16 +13,17 @@ describe('converter utilities', () => {
     updated_at: Date.now()
   }
 
-  const mockRowCalibration: CalibrationProfile = {
-    modality: 'row',
-    damper: 5,
-    a: 0.15,
-    b: 0.35,
-    r2: 0.98,
-    samples: [],
-    created_at: Date.now(),
-    updated_at: Date.now()
-  }
+  // Commented out to fix unused variable warning
+  // const mockRowCalibration: CalibrationProfile = {
+  //   modality: 'row',
+  //   damper: 5,
+  //   a: 0.15,
+  //   b: 0.35,
+  //   r2: 0.98,
+  //   samples: [],
+  //   created_at: Date.now(),
+  //   updated_at: Date.now()
+  // }
 
   const sampleWorkout: Workout = {
     id: 'test',
