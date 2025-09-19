@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CalibrationProfile, UserProfile } from '@/lib/types'
+import { CalibrationProfile } from '@/lib/types'
 import { persistence } from '@/lib/persistence'
 import { useAuth } from '@/lib/auth'
 import Link from 'next/link'
@@ -9,58 +9,124 @@ import Link from 'next/link'
 export default function SettingsPage() {
   const { session } = useAuth()
   const [calibrations, setCalibrations] = useState<CalibrationProfile[]>([])
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [preferredUnits, setPreferredUnits] = useState<'watts' | 'pace' | 'rpm'>('watts')
   const [exportData, setExportData] = useState('')
   const [importData, setImportData] = useState('')
   const [message, setMessage] = useState('')
   const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set())
+  const [selectedEquipment, setSelectedEquipment] = useState<'bike' | 'row'>('bike')
 
   useEffect(() => {
     loadData()
   }, [])
 
+  // Test calibration data (same as main page)
+  const testCalibrations = [
+    // BikeErg calibrations
+    {
+      id: 1,
+      modality: 'bike' as const,
+      damper: 5,
+      a: 0.00018895192514459947,
+      b: 3.2251860885800876,
+      r2: 0.9997930693713766,
+      samples: [
+        { rpm: 70, watts: 169, source: 'manual' as const, timestamp: 1758153189694 },
+        { rpm: 75, watts: 210, source: 'manual' as const, timestamp: 1758153268807 },
+        { rpm: 80, watts: 260, source: 'manual' as const, timestamp: 1758153378488 }
+      ],
+      created_at: 1758193424890,
+      updated_at: 1758193424890
+    },
+    {
+      id: 2,
+      modality: 'bike' as const,
+      damper: 4,
+      a: 0.00025629255589648,
+      b: 3.09428147594641,
+      r2: 0.999794785515299,
+      samples: [
+        { rpm: 70, watts: 131, source: 'manual' as const, timestamp: 1758153189694 },
+        { rpm: 75, watts: 168, source: 'manual' as const, timestamp: 1758153268807 },
+        { rpm: 80, watts: 210, source: 'manual' as const, timestamp: 1758153378488 }
+      ],
+      created_at: 1758193424890,
+      updated_at: 1758193424890
+    },
+    // RowErg calibrations
+    {
+      id: 3,
+      modality: 'row' as const,
+      damper: 4,
+      a: 0.145,
+      b: 0.342,
+      r2: 0.9892,
+      samples: [
+        { pace_500: 130, watts: 150, source: 'manual' as const, timestamp: 1758153189694 }, // 2:10/500m, 20 SPM equivalent
+        { pace_500: 125, watts: 170, source: 'manual' as const, timestamp: 1758153268807 }, // 2:05/500m, 22 SPM equivalent
+        { pace_500: 120, watts: 190, source: 'manual' as const, timestamp: 1758153378488 }  // 2:00/500m, 24 SPM equivalent
+      ],
+      created_at: 1758193424890,
+      updated_at: 1758193424890
+    },
+    {
+      id: 4,
+      modality: 'row' as const,
+      damper: 6,
+      a: 0.158,
+      b: 0.338,
+      r2: 0.9915,
+      samples: [
+        { pace_500: 120, watts: 180, source: 'manual' as const, timestamp: 1758153189694 }, // 2:00/500m, 24 SPM equivalent
+        { pace_500: 115, watts: 210, source: 'manual' as const, timestamp: 1758153268807 }, // 1:55/500m, 26 SPM equivalent
+        { pace_500: 110, watts: 240, source: 'manual' as const, timestamp: 1758153378488 }  // 1:50/500m, 28 SPM equivalent
+      ],
+      created_at: 1758193424890,
+      updated_at: 1758193424890
+    }
+  ]
+
   const loadData = async () => {
     try {
       // Load calibration history (sorted by created_at descending)
       const allCalibrations = await persistence.getCalibrationHistory()
-      setCalibrations(allCalibrations)
+      console.log('Settings: Loaded calibrations from persistence:', allCalibrations.length, allCalibrations)
 
-      // Load or create profile
-      let userProfile = await persistence.loadProfile('default')
-      if (!userProfile) {
-        userProfile = {
-          id: 'default',
-          preferred_units: 'watts',
-          last_damper: 5,
-          calibrations: []
-        }
-        await persistence.saveProfile(userProfile)
+      // If no real calibrations exist, fall back to test data
+      if (allCalibrations.length === 0) {
+        console.log('Settings: No calibrations found, using test data')
+        setCalibrations(testCalibrations)
+        console.log('Settings: Set test calibrations:', testCalibrations)
+      } else {
+        console.log('Settings: Using real calibrations')
+        setCalibrations(allCalibrations)
       }
-      setProfile(userProfile)
-      setPreferredUnits(userProfile.preferred_units)
     } catch (err) {
-      setMessage('Error loading data')
+      console.error('Settings: Error loading calibrations:', err)
+      // Fall back to test data on error
+      setCalibrations(testCalibrations)
+      setMessage('Error loading data - using test data')
     }
   }
 
-  const savePreferences = async () => {
-    if (!profile) return
+  // Filter calibrations based on selected equipment
+  // Handle calibrations without modality field by inferring it from samples
+  const filteredCalibrations = calibrations.filter(cal => {
+    let modality = cal.modality
 
-    const updatedProfile: UserProfile = {
-      ...profile,
-      preferred_units: preferredUnits
+    // If modality is missing, infer it from sample data
+    if (!modality && cal.samples && cal.samples.length > 0) {
+      const firstSample = cal.samples[0]
+      // BikeErg samples have RPM, RowErg samples have pace_500
+      modality = firstSample.rpm !== undefined ? 'bike' : 'row'
     }
 
-    try {
-      await persistence.saveProfile(updatedProfile)
-      setProfile(updatedProfile)
-      setMessage('Preferences saved!')
-      setTimeout(() => setMessage(''), 3000)
-    } catch (err) {
-      setMessage('Error saving preferences')
-    }
-  }
+    return modality === selectedEquipment
+  })
+  console.log('Settings: Selected equipment:', selectedEquipment)
+  console.log('Settings: All calibrations:', calibrations.length, calibrations)
+  console.log('Settings: Calibration modalities:', calibrations.map(cal => ({ id: cal.id, modality: cal.modality, damper: cal.damper })))
+  console.log('Settings: Filtered calibrations:', filteredCalibrations.length, filteredCalibrations)
+
 
   const exportDataHandler = async () => {
     try {
@@ -221,7 +287,22 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iNCIvPjwvZz48L2c+PC9zdmc+')] opacity-40"></div>
-      
+
+      {/* Home Button */}
+      <div className="relative z-20 pt-4 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <Link
+            href="/"
+            className="inline-flex items-center space-x-2 text-green-400 hover:text-green-300 bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/20 transition-colors duration-200"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            <span>Home</span>
+          </Link>
+        </div>
+      </div>
+
       <div className="relative z-10 min-h-screen py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
@@ -240,49 +321,7 @@ export default function SettingsPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Preferences */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 shadow-xl p-8">
-              <div className="flex items-center mb-6">
-                <div className="bg-green-500 p-3 rounded-lg mr-4">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">Preferences</h2>
-              </div>
-              
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-200 mb-3">
-                    Preferred Units
-                  </label>
-                  <select
-                    value={preferredUnits}
-                    onChange={(e) => setPreferredUnits(e.target.value as 'watts' | 'pace' | 'rpm')}
-                    className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-white backdrop-blur-sm"
-                  >
-                    <option value="watts" className="text-black">Watts</option>
-                    <option value="pace" className="text-black">Pace</option>
-                    <option value="rpm" className="text-black">RPM</option>
-                  </select>
-                </div>
-
-                <button
-                  onClick={savePreferences}
-                  className="group relative w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-4 px-6 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 transform hover:-translate-y-0.5"
-                >
-                  <div className="flex items-center justify-center space-x-3">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Save Preferences</span>
-                  </div>
-                  <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 rounded-xl transition-opacity duration-200"></div>
-                </button>
-              </div>
-            </div>
-
+          <div className="grid grid-cols-1 gap-8">
             {/* Calibrations */}
             <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 shadow-xl p-8">
               <div className="flex items-center justify-between mb-6">
@@ -295,28 +334,51 @@ export default function SettingsPage() {
                   </div>
                   <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">Calibrations</h2>
                 </div>
-                <Link
-                  href="/calibrate"
-                  className="group relative bg-gradient-to-r from-emerald-600 to-emerald-700 text-white py-2 px-4 rounded-lg font-medium shadow-lg hover:shadow-xl hover:from-emerald-700 hover:to-emerald-800 transition-all duration-200 transform hover:-translate-y-0.5"
-                >
-                  <div className="flex items-center space-x-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    <span>Add New</span>
-                  </div>
-                  <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 rounded-lg transition-opacity duration-200"></div>
-                </Link>
+                <div className="flex flex-col space-y-3">
+                  <select
+                    value={selectedEquipment}
+                    onChange={(e) => setSelectedEquipment(e.target.value as 'bike' | 'row')}
+                    className="px-4 py-2 bg-white/20 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent text-white backdrop-blur-sm"
+                  >
+                    <option value="bike" className="text-black">⚡ BikeErg</option>
+                    <option value="row" className="text-black">🚣 RowErg</option>
+                  </select>
+                  <Link
+                    href={selectedEquipment === 'bike' ? '/calibrate' : '/calibrate-rower'}
+                    className={`group relative ${
+                      selectedEquipment === 'bike'
+                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
+                        : 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800'
+                    } text-white py-2 px-4 rounded-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5`}
+                  >
+                    <div className="flex items-center justify-center space-x-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      <span>Create {selectedEquipment === 'bike' ? 'BikeErg' : 'RowErg'} Calibration</span>
+                    </div>
+                    <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 rounded-lg transition-opacity duration-200"></div>
+                  </Link>
+                </div>
               </div>
 
-              {calibrations.length > 0 ? (
+              {filteredCalibrations.length > 0 ? (
                 <div className="space-y-4">
-                  {calibrations.map((cal, index) => (
+                  {filteredCalibrations.map((cal, index) => (
                     <div key={cal.id || index} className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-2">
-                            <div className="text-white font-bold text-lg">Damper {cal.damper}</div>
+                            <div className="flex items-center space-x-3">
+                              <div className="text-white font-bold text-lg">Damper {cal.damper}</div>
+                              <div className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                                cal.modality === 'bike'
+                                  ? 'bg-blue-500/20 text-blue-300 border border-blue-400/30'
+                                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                              }`}>
+                                {cal.modality === 'bike' ? '⚡ BikeErg' : '🚣 RowErg'}
+                              </div>
+                            </div>
                             {cal.created_at && (
                               <div className="text-gray-400 text-sm">
                                 {new Date(cal.created_at).toLocaleDateString()} {new Date(cal.created_at).toLocaleTimeString()}
@@ -362,15 +424,15 @@ export default function SettingsPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
                     </div>
-                    <p className="text-gray-400 text-lg mb-3">No calibrations yet</p>
+                    <p className="text-gray-400 text-lg mb-3">No {selectedEquipment === 'bike' ? 'BikeErg' : 'RowErg'} calibrations yet</p>
                     <Link
-                      href="/calibrate"
+                      href={selectedEquipment === 'bike' ? '/calibrate' : '/calibrate-rower'}
                       className="inline-flex items-center space-x-2 text-emerald-400 hover:text-emerald-300 transition-colors duration-200"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                       </svg>
-                      <span>Create your first calibration</span>
+                      <span>Create your first {selectedEquipment === 'bike' ? 'BikeErg' : 'RowErg'} calibration</span>
                     </Link>
                   </div>
                 </div>

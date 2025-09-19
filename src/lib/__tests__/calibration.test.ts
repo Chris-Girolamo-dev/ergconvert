@@ -40,11 +40,11 @@ describe('calibration utilities', () => {
       
       // Test prediction accuracy with original data points
       sampleData.forEach(sample => {
-        const predictedWatts = predictWatts(sample.rpm, a, b)
+        const predictedWatts = predictWatts(sample.rpm!, a, b)
         expect(predictedWatts).toBeCloseTo(sample.watts, -1) // Within 1 watt
         
         const predictedRpm = predictRpm(sample.watts, a, b)
-        expect(predictedRpm).toBeCloseTo(sample.rpm, -1) // Within 1 RPM
+        expect(predictedRpm).toBeCloseTo(sample.rpm!, -1) // Within 1 RPM
       })
     })
 
@@ -63,9 +63,12 @@ describe('calibration utilities', () => {
     it('validates good calibration', () => {
       const { a, b, r2 } = fitPowerCurve(sampleData)
       const calibration: CalibrationProfile = {
+        modality: 'bike',
         damper: 5,
         a, b, r2,
-        samples: sampleData
+        samples: sampleData,
+        created_at: Date.now(),
+        updated_at: Date.now()
       }
       
       expect(validateCalibration(calibration)).toBe(true)
@@ -73,11 +76,14 @@ describe('calibration utilities', () => {
 
     it('rejects poor calibration', () => {
       const calibration: CalibrationProfile = {
+        modality: 'bike',
         damper: 5,
         a: 0.001,
         b: 3.0,
         r2: 0.85, // Too low
-        samples: sampleData
+        samples: sampleData,
+        created_at: Date.now(),
+        updated_at: Date.now()
       }
       
       expect(validateCalibration(calibration)).toBe(false)
@@ -86,9 +92,12 @@ describe('calibration utilities', () => {
     it('rejects insufficient samples', () => {
       const { a, b, r2 } = fitPowerCurve(sampleData)
       const calibration: CalibrationProfile = {
+        modality: 'bike',
         damper: 5,
         a, b, r2,
-        samples: sampleData.slice(0, 2) // Too few samples
+        samples: sampleData.slice(0, 2), // Too few samples
+        created_at: Date.now(),
+        updated_at: Date.now()
       }
       
       expect(validateCalibration(calibration)).toBe(false)

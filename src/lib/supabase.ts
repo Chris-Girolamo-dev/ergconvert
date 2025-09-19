@@ -12,6 +12,7 @@ export const supabase = supabaseUrl && supabaseServiceKey
 export interface SupabaseCalibrationProfile {
   id: string
   user_id: string
+  modality: 'row' | 'bike' // Equipment type - should be added to database
   damper: number
   coefficient_a: number
   coefficient_b: number
@@ -32,7 +33,6 @@ export interface SupabaseCalibrationSample {
 
 export interface SupabaseUserProfile {
   id: string
-  preferred_units: 'watts' | 'pace' | 'rpm'
   last_damper: number
   created_at: string
   updated_at: string
@@ -116,6 +116,7 @@ export class SupabaseService {
 
       const calibration: CalibrationProfile = {
         id: profile.id,
+        modality: profile.modality || (profile.damper ? 'bike' : 'row'), // Use explicit modality or fallback
         damper: profile.damper,
         a: profile.coefficient_a,
         b: profile.coefficient_b,
@@ -158,6 +159,7 @@ export class SupabaseService {
       .from('calibration_profiles')
       .insert({
         user_id: userId,
+        modality: calibration.modality,
         damper: calibration.damper,
         coefficient_a: calibration.a,
         coefficient_b: calibration.b,

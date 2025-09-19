@@ -1,12 +1,12 @@
 import { Workout, ConversionResult, ConvertedInterval, CalibrationProfile, Interval } from './types'
 import { paceToWatts, wattsToPace } from './c2'
-import { predictRpm, getGenericCalibration, clampRpm } from './calibration'
+import { predictRpm, predictRate, getGenericCalibration, getGenericRowCalibration, clampRpm, clampStrokeRate } from './calibration'
 
 /**
  * Helper functions for cross-modality conversions
  */
 
-function getSourcePace(interval: Interval, workout: Workout): number {
+function getSourcePace(interval: Interval, workout: Workout, a: number, b: number): number {
   // Get the pace from the source workout specification
   switch (workout.target_spec) {
     case 'pace_500':
@@ -25,8 +25,9 @@ function getSourcePace(interval: Interval, workout: Workout): number {
       // Convert watts back to pace for source modality
       return wattsToPace(interval.target_value, workout.source_modality === 'row')
     case 'rpm':
-      // Convert RPM to watts, then to pace (requires calibration)
-      throw new Error('RPM to pace conversion requires calibration context')
+      // Convert RPM to watts using calibration, then to pace
+      const watts = a * Math.pow(interval.target_value, b)
+      return wattsToPace(watts, workout.source_modality === 'row')
     default:
       throw new Error(`Unsupported target spec for source pace: ${workout.target_spec}`)
   }
@@ -47,8 +48,24 @@ export function convertWorkout(
   workout: Workout,
   calibrationProfile?: CalibrationProfile
 ): ConversionResult {
-  const { a, b } = calibrationProfile || getGenericCalibration(workout.damper_for_target || 5)
-  
+  // Get calibration coefficients based on target modality
+  let a: number, b: number
+  if (calibrationProfile) {
+    a = calibrationProfile.a
+    b = calibrationProfile.b
+  } else {
+    // Use generic calibration based on target modality
+    if (workout.target_modality === 'bike') {
+      const generic = getGenericCalibration(workout.damper_for_target || 5)
+      a = generic.a
+      b = generic.b
+    } else {
+      const generic = getGenericRowCalibration(workout.damper_for_target || 5)
+      a = generic.a
+      b = generic.b
+    }
+  }
+
   const convertedIntervals: ConvertedInterval[] = workout.intervals.map((interval, index) => {
     // Step 1: Convert source target to watts
     let targetWatts: number
@@ -77,7 +94,10 @@ export function convertWorkout(
     // Step 2: Convert watts to target modality units
     const isTargetRow = workout.target_modality === 'row'
     const targetPace = wattsToPace(targetWatts, isTargetRow)
-    const targetRpm = predictRpm(targetWatts, a, b)
+
+    // Calculate target rate (RPM for bike, stroke rate for rowing)
+    const targetRate = predictRate(targetWatts, a, b, workout.target_modality)
+    const targetRpm = isTargetRow ? clampStrokeRate(targetRate) : clampRpm(targetRate)
     
     // Calculate duration and distance based on modality conversion
     let durationSeconds: number | undefined
@@ -90,7 +110,7 @@ export function convertWorkout(
       if (isCrossModalityConversion) {
         // Cross-modality: Convert based on time duration, not distance
         // First calculate the time it takes on source modality
-        const sourcePace = getSourcePace(interval, workout)
+        const sourcePace = getSourcePace(interval, workout, a, b)
         const sourceTimeSeconds = calculateTimeFromDistance(interval.distance, sourcePace, isSourceRow)
         
         // Use that time duration for target modality

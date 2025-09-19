@@ -7,7 +7,6 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- User profiles table
 CREATE TABLE user_profiles (
   id UUID REFERENCES auth.users(id) PRIMARY KEY,
-  preferred_units TEXT CHECK (preferred_units IN ('watts', 'pace', 'rpm')) DEFAULT 'watts',
   last_damper INTEGER DEFAULT 5,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

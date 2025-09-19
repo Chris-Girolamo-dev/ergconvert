@@ -2,12 +2,26 @@ import { convertWorkout, getRestTargets, formatConversionForExport } from '../co
 import { Workout, CalibrationProfile } from '../types'
 
 describe('converter utilities', () => {
-  const mockCalibration: CalibrationProfile = {
+  const mockBikeCalibration: CalibrationProfile = {
+    modality: 'bike',
     damper: 5,
     a: 0.0026,
     b: 3.2,
     r2: 0.98,
-    samples: []
+    samples: [],
+    created_at: Date.now(),
+    updated_at: Date.now()
+  }
+
+  const mockRowCalibration: CalibrationProfile = {
+    modality: 'row',
+    damper: 5,
+    a: 0.15,
+    b: 0.35,
+    r2: 0.98,
+    samples: [],
+    created_at: Date.now(),
+    updated_at: Date.now()
   }
 
   const sampleWorkout: Workout = {
@@ -25,7 +39,7 @@ describe('converter utilities', () => {
 
   describe('convertWorkout', () => {
     it('converts RowErg to BikeErg workout correctly', () => {
-      const result = convertWorkout(sampleWorkout, mockCalibration)
+      const result = convertWorkout(sampleWorkout, mockBikeCalibration)
       
       expect(result.intervals).toHaveLength(2)
       expect(result.rest_seconds).toBe(45)
@@ -35,7 +49,9 @@ describe('converter utilities', () => {
       const firstInterval = result.intervals[0]
       expect(firstInterval.target_watts).toBeCloseTo(263, 5) // ~263W
       expect(firstInterval.target_rpm).toBeGreaterThanOrEqual(60) // Should be reasonable RPM
-      expect(firstInterval.distance_meters).toBe(250)
+      // Cross-modality conversions are time-based, not distance-based
+      expect(firstInterval.distance_meters).toBeUndefined()
+      expect(firstInterval.duration_seconds).toBeGreaterThan(0)
       
       // Check that all values are reasonable
       expect(firstInterval.target_watts).toBeGreaterThan(200)
@@ -55,7 +71,7 @@ describe('converter utilities', () => {
         ]
       }
 
-      const result = convertWorkout(bikeWorkout, mockCalibration)
+      const result = convertWorkout(bikeWorkout, mockBikeCalibration)
       
       expect(result.intervals).toHaveLength(1)
       const interval = result.intervals[0]
@@ -74,7 +90,7 @@ describe('converter utilities', () => {
         ]
       }
 
-      const result = convertWorkout(wattsWorkout, mockCalibration)
+      const result = convertWorkout(wattsWorkout, mockBikeCalibration)
       const interval = result.intervals[0]
       
       expect(interval.target_watts).toBe(270)
@@ -91,11 +107,12 @@ describe('converter utilities', () => {
     })
 
     it('calculates duration for distance-based intervals', () => {
-      const result = convertWorkout(sampleWorkout, mockCalibration)
-      
+      const result = convertWorkout(sampleWorkout, mockBikeCalibration)
+
       result.intervals.forEach(interval => {
         expect(interval.duration_seconds).toBeGreaterThan(0)
-        expect(interval.distance_meters).toBeGreaterThan(0)
+        // Cross-modality conversions are time-based, not distance-based
+        expect(interval.distance_meters).toBeUndefined()
       })
     })
 
@@ -112,7 +129,7 @@ describe('converter utilities', () => {
 
   describe('getRestTargets', () => {
     it('provides reasonable rest targets', () => {
-      const targets = getRestTargets(5, mockCalibration)
+      const targets = getRestTargets(5, mockBikeCalibration)
       
       expect(targets.rpm.min).toBe(60)
       expect(targets.rpm.max).toBe(65)
@@ -123,18 +140,18 @@ describe('converter utilities', () => {
 
   describe('formatConversionForExport', () => {
     it('formats text export correctly', () => {
-      const result = convertWorkout(sampleWorkout, mockCalibration)
+      const result = convertWorkout(sampleWorkout, mockBikeCalibration)
       const text = formatConversionForExport(result, 'text')
-      
+
       expect(text).toContain('BikeErg Workout')
       expect(text).toContain('Damper 5')
-      expect(text).toContain('55s') // Duration should be calculated
+      expect(text).toContain('0:55') // Duration should be formatted as MM:SS
       expect(text).toContain('RPM')
       expect(text).toContain('Rest:')
     })
 
     it('formats CSV export correctly', () => {
-      const result = convertWorkout(sampleWorkout, mockCalibration)
+      const result = convertWorkout(sampleWorkout, mockBikeCalibration)
       const csv = formatConversionForExport(result, 'csv')
       
       expect(csv).toContain('Rep,Target Watts,Target RPM')
@@ -156,7 +173,7 @@ describe('converter utilities', () => {
         intervals: [{ distance: 50, target_value: 110 }]
       }
 
-      const result = convertWorkout(shortWorkout, mockCalibration)
+      const result = convertWorkout(shortWorkout, mockBikeCalibration)
       expect(result.intervals[0].duration_seconds).toBeGreaterThan(0)
     })
 
@@ -166,7 +183,7 @@ describe('converter utilities', () => {
         intervals: [{ distance: 5000, target_value: 120 }]
       }
 
-      const result = convertWorkout(longWorkout, mockCalibration)
+      const result = convertWorkout(longWorkout, mockBikeCalibration)
       expect(result.intervals[0].duration_seconds).toBeGreaterThan(600) // Should be > 10 minutes
     })
 
@@ -176,11 +193,12 @@ describe('converter utilities', () => {
         intervals: [{ duration: 300, target_value: 110 }] // 5 minutes
       }
 
-      const result = convertWorkout(timeWorkout, mockCalibration)
+      const result = convertWorkout(timeWorkout, mockBikeCalibration)
       const interval = result.intervals[0]
-      
+
       expect(interval.duration_seconds).toBe(300)
-      expect(interval.distance_meters).toBeGreaterThan(0)
+      // Cross-modality conversions are time-based, distance is undefined
+      expect(interval.distance_meters).toBeUndefined()
     })
   })
 })

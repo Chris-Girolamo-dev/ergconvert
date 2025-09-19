@@ -1,6 +1,6 @@
 'use client'
 
-import { CalibrationProfile } from './types'
+import { CalibrationProfile, Sample } from './types'
 import { persistence } from './persistence'
 
 export class SyncService {
@@ -65,13 +65,13 @@ export class SyncService {
       console.log('⬆️ Checking for calibrations to upload...')
       for (const [key, local] of localMap) {
         if (!cloudMap.has(key)) {
-          console.log(`⬆️ Uploading calibration: damper ${local.damper}`)
+          console.log(`⬆️ Uploading calibration: ${local.modality} damper ${local.damper}`)
           try {
             await this.uploadCalibration(local)
             result.uploaded++
-            console.log(`✅ Uploaded calibration: damper ${local.damper}`)
+            console.log(`✅ Uploaded calibration: ${local.modality} damper ${local.damper}`)
           } catch (error) {
-            console.error(`❌ Upload failed for damper ${local.damper}:`, error)
+            console.error(`❌ Upload failed for ${local.modality} damper ${local.damper}:`, error)
             result.errors.push(`Failed to upload calibration: ${error}`)
           }
         }
@@ -81,13 +81,13 @@ export class SyncService {
       console.log('⬇️ Checking for calibrations to download...')
       for (const [key, cloud] of cloudMap) {
         if (!localMap.has(key)) {
-          console.log(`⬇️ Downloading calibration: damper ${cloud.damper}`)
+          console.log(`⬇️ Downloading calibration: ${cloud.modality} damper ${cloud.damper}`)
           try {
             await this.downloadCalibration(cloud)
             result.downloaded++
-            console.log(`✅ Downloaded calibration: damper ${cloud.damper}`)
+            console.log(`✅ Downloaded calibration: ${cloud.modality} damper ${cloud.damper}`)
           } catch (error) {
-            console.error(`❌ Download failed for damper ${cloud.damper}:`, error)
+            console.error(`❌ Download failed for ${cloud.modality} damper ${cloud.damper}:`, error)
             result.errors.push(`Failed to download calibration: ${error}`)
           }
         }
@@ -101,15 +101,15 @@ export class SyncService {
   }
 
   private generateCalibrationKey(calibration: CalibrationProfile): string {
-    // Generate a unique key based on damper setting and sample data
+    // Generate a unique key based on modality, damper setting and sample data
     const samplesHash = this.hashSamples(calibration.samples)
-    return `${calibration.damper}-${samplesHash}`
+    return `${calibration.modality}-${calibration.damper}-${samplesHash}`
   }
 
-  private hashSamples(samples: { rpm: number; watts: number }[]): string {
+  private hashSamples(samples: Sample[]): string {
     // Simple hash of samples to detect uniqueness
     const sampleString = samples
-      .map(s => `${s.rpm},${s.watts}`)
+      .map(s => `${s.rpm || 0},${s.watts}`)
       .sort()
       .join('|')
     
@@ -124,7 +124,7 @@ export class SyncService {
   }
 
   private async uploadCalibration(calibration: CalibrationProfile): Promise<void> {
-    console.log(`📤 Starting upload for damper ${calibration.damper}`)
+    console.log(`📤 Starting upload for ${calibration.modality} damper ${calibration.damper}`)
     
     try {
       const response = await fetch('/api/calibrations', {
@@ -161,6 +161,7 @@ export class SyncService {
   private async downloadCalibration(calibration: CalibrationProfile): Promise<void> {
     // Remove cloud-specific ID and timestamps, let IndexedDB assign new ones
     const localCalibration: CalibrationProfile = {
+      modality: calibration.modality,
       damper: calibration.damper,
       a: calibration.a,
       b: calibration.b,

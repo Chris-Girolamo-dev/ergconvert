@@ -160,15 +160,53 @@ class PersistenceManager {
 
   async loadCalibrationsByDamper(damper: number): Promise<CalibrationProfile[]> {
     if (!this.db) await this.init()
-    
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([STORES.calibrations], 'readonly')
       const store = transaction.objectStore(STORES.calibrations)
       const index = store.index('damper')
       const request = index.getAll(damper)
-      
+
       request.onerror = () => reject(request.error)
       request.onsuccess = () => resolve(request.result)
+    })
+  }
+
+  async loadCalibrationsByModality(modality: 'row' | 'bike'): Promise<CalibrationProfile[]> {
+    if (!this.db) await this.init()
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([STORES.calibrations], 'readonly')
+      const store = transaction.objectStore(STORES.calibrations)
+      const request = store.getAll()
+
+      request.onerror = () => reject(request.error)
+      request.onsuccess = () => {
+        const calibrations = request.result.filter(cal => cal.modality === modality)
+        // Sort by created_at descending (newest first)
+        calibrations.sort((a, b) => b.created_at - a.created_at)
+        resolve(calibrations)
+      }
+    })
+  }
+
+  async loadCalibrationsByModalityAndDamper(modality: 'row' | 'bike', damper: number): Promise<CalibrationProfile[]> {
+    if (!this.db) await this.init()
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([STORES.calibrations], 'readonly')
+      const store = transaction.objectStore(STORES.calibrations)
+      const request = store.getAll()
+
+      request.onerror = () => reject(request.error)
+      request.onsuccess = () => {
+        const calibrations = request.result.filter(cal =>
+          cal.modality === modality && cal.damper === damper
+        )
+        // Sort by created_at descending (newest first)
+        calibrations.sort((a, b) => b.created_at - a.created_at)
+        resolve(calibrations)
+      }
     })
   }
 
@@ -256,16 +294,41 @@ class PersistenceManager {
   // Enhanced calibration methods
   async getLatestCalibrationByDamper(damper: number): Promise<CalibrationProfile | null> {
     if (!this.db) await this.init()
-    
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([STORES.calibrations], 'readonly')
       const store = transaction.objectStore(STORES.calibrations)
       const index = store.index('damper')
       const request = index.getAll(damper)
-      
+
       request.onerror = () => reject(request.error)
       request.onsuccess = () => {
         const calibrations = request.result
+        if (calibrations.length === 0) {
+          resolve(null)
+        } else {
+          // Sort by created_at descending and return the latest
+          calibrations.sort((a, b) => b.created_at - a.created_at)
+          resolve(calibrations[0])
+        }
+      }
+    })
+  }
+
+  async getLatestCalibrationByModalityAndDamper(modality: 'row' | 'bike', damper: number): Promise<CalibrationProfile | null> {
+    if (!this.db) await this.init()
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([STORES.calibrations], 'readonly')
+      const store = transaction.objectStore(STORES.calibrations)
+      const request = store.getAll()
+
+      request.onerror = () => reject(request.error)
+      request.onsuccess = () => {
+        const calibrations = request.result.filter(cal =>
+          cal.modality === modality && cal.damper === damper
+        )
+
         if (calibrations.length === 0) {
           resolve(null)
         } else {

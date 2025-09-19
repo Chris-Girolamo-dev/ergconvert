@@ -33,7 +33,7 @@ export default function ConvertPage() {
 
   useEffect(() => {
     loadCalibrations()
-  }, [damper])
+  }, [damper, targetModality])
 
   useEffect(() => {
     // Update display format when target spec changes
@@ -50,8 +50,13 @@ export default function ConvertPage() {
 
   const loadCalibrations = async () => {
     try {
-      const cals = await persistence.loadCalibrationsByDamper(damper)
-      setCalibrations(cals)
+      if (targetModality === 'bike') {
+        const cals = await persistence.loadCalibrationsByDamper(damper)
+        setCalibrations(cals)
+      } else {
+        const cals = await persistence.loadCalibrationsByModality('row')
+        setCalibrations(cals)
+      }
     } catch (err) {
       console.error('Error loading calibrations:', err)
     }
@@ -110,12 +115,15 @@ export default function ConvertPage() {
   const convertWorkoutHandler = async () => {
     try {
       setError('')
-      
-      // Get calibration for BikeErg target workouts
+
+      // Get calibration based on target modality
       let calibrationProfile: CalibrationProfile | undefined
       if (targetModality === 'bike') {
         const cals = await persistence.loadCalibrationsByDamper(damper)
         calibrationProfile = cals[0] // Use most recent calibration for this damper
+      } else {
+        const cals = await persistence.loadCalibrationsByModality('row')
+        calibrationProfile = cals[0] // Use most recent rowing calibration
       }
 
       const workout: Workout = {
@@ -156,7 +164,22 @@ export default function ConvertPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iNCIvPjwvZz48L2c+PC9zdmc+')] opacity-40"></div>
-      
+
+      {/* Home Button */}
+      <div className="relative z-20 pt-4 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <Link
+            href="/"
+            className="inline-flex items-center space-x-2 text-green-400 hover:text-green-300 bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/20 transition-colors duration-200"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            <span>Home</span>
+          </Link>
+        </div>
+      </div>
+
       <div className="relative z-10 min-h-screen py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
@@ -254,6 +277,17 @@ export default function ConvertPage() {
                         No calibration for damper {damper} - <Link href="/calibrate" className="underline hover:text-white">calibrate now</Link>
                       </p>
                     )}
+                  </div>
+                )}
+
+                {targetModality === 'row' && calibrations.length === 0 && (
+                  <div className="bg-amber-500/20 backdrop-blur-sm rounded-lg p-4 border border-amber-400/30">
+                    <p className="text-xs text-amber-300 flex items-center">
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      No RowErg calibration found - <Link href="/calibrate-rower" className="underline hover:text-white">calibrate now</Link> for better accuracy
+                    </p>
                   </div>
                 )}
 
@@ -376,7 +410,7 @@ export default function ConvertPage() {
                             </span>
                             <div className="flex items-center space-x-4">
                               <span className="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-lg font-mono text-sm">
-                                {interval.target_rpm} RPM
+                                {interval.target_rpm} {targetModality === 'row' ? 's/m' : 'RPM'}
                               </span>
                               <span className="bg-yellow-500/20 text-yellow-300 px-3 py-1 rounded-lg font-mono text-sm">
                                 {interval.target_watts}W
@@ -393,7 +427,7 @@ export default function ConvertPage() {
                               {result.rest_seconds}s
                             </span>
                             <span className="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-lg font-mono text-sm">
-                              {getRestTargets(result.damper).rpm.min}-{getRestTargets(result.damper).rpm.max} RPM
+                              {getRestTargets(result.damper).rpm.min}-{getRestTargets(result.damper).rpm.max} {targetModality === 'row' ? 's/m' : 'RPM'}
                             </span>
                           </div>
                         </div>
